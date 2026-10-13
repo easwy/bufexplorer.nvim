@@ -67,6 +67,20 @@ Set a keymap to `false` to disable it.
 
 ## Commands/API
 
+The plugin registers the `:BufExplore` user command:
+
+```vim
+:BufExplore
+```
+
+It is equivalent to:
+
+```lua
+require("bufexplore").open()
+```
+
+The Lua API is:
+
 ```lua
 local buffers = require("bufexplore")
 
