@@ -1,0 +1,2 @@
+-- bufexplore.nvim intentionally does not auto-configure itself.
+-- Call require("bufexplore").setup() from your Neovim configuration.

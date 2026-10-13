@@ -1,4 +1,4 @@
-# buffer-list.nvim
+# bufexplore.nvim
 
 A small, dependency-free buffer list for Neovim 0.10+, designed to be embeddable in Edgy without depending on Edgy.
 
@@ -10,12 +10,12 @@ A small, dependency-free buffer list for Neovim 0.10+, designed to be embeddable
 - Switches and normally deletes buffers from a buffer-local keymap.
 - Updates on buffer enter, creation, deletion, rename, and modified-state changes.
 - Does not create splits or floating windows.
-- Exposes `filetype = "buffer-list"` for Edgy integration.
+- Exposes `filetype = "bufexplore"` for Edgy integration.
 
 ## Setup
 
 ```lua
-require("buffer-list").setup()
+require("bufexplore").setup()
 ```
 
 The default format is:
@@ -28,7 +28,7 @@ Example:
 
 ```text
 12 README.md /home/user/project/README.md
-3 init.lua /home/user/project/lua/buffer-list/init.lua
+3 init.lua /home/user/project/lua/bufexplore/init.lua
 ```
 
 The default keymaps are buffer-local to the list:
@@ -43,7 +43,7 @@ The default keymaps are buffer-local to the list:
 ## Configuration
 
 ```lua
-require("buffer-list").setup({
+require("bufexplore").setup({
   format = "{bufnr} {basename} {path}",
   current_marker = ">",
   modified_marker = "+",
@@ -68,7 +68,7 @@ Set a keymap to `false` to disable it.
 ## Commands/API
 
 ```lua
-local buffers = require("buffer-list")
+local buffers = require("bufexplore")
 
 buffers.open()    -- show in the current window; never creates a split
 buffers.close()
@@ -80,4 +80,4 @@ buffers.get_bufnr()
 buffers.is_open()
 ```
 
-`setup()` is not called automatically. The plugin does not depend on Edgy or call Edgy APIs. To embed it, configure Edgy to recognize the `buffer-list` filetype and call `require("buffer-list").open()` when the list should be displayed.
+`setup()` is not called automatically. The plugin does not depend on Edgy or call Edgy APIs. To embed it, configure Edgy to recognize the `bufexplore` filetype and call `require("bufexplore").open()` when the list should be displayed.

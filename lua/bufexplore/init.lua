@@ -26,7 +26,7 @@ local state = {
 }
 
 local function notify(message, level)
-  vim.notify("buffer-list: " .. message, level or vim.log.levels.INFO)
+  vim.notify("bufexplore: " .. message, level or vim.log.levels.INFO)
 end
 
 local function is_valid(bufnr)
@@ -106,13 +106,13 @@ local function ensure_list_buffer()
   local bufnr = vim.api.nvim_create_buf(false, true)
   state.list_bufnr = bufnr
 
-  vim.api.nvim_buf_set_name(bufnr, "[buffer-list]")
+  vim.api.nvim_buf_set_name(bufnr, "[bufexplore]")
   vim.bo[bufnr].buftype = "nofile"
   vim.bo[bufnr].bufhidden = "hide"
   vim.bo[bufnr].swapfile = false
   vim.bo[bufnr].modifiable = false
   vim.bo[bufnr].buflisted = false
-  vim.bo[bufnr].filetype = "buffer-list"
+  vim.bo[bufnr].filetype = "bufexplore"
 
   return bufnr
 end
@@ -274,18 +274,18 @@ end
 function M.setup(opts)
   opts = opts or {}
   if type(opts) ~= "table" then
-    error("buffer-list.setup() expects a table")
+    error("bufexplore.setup() expects a table")
   end
 
   local config = vim.tbl_deep_extend("force", vim.deepcopy(defaults), opts)
   if type(config.format) ~= "string" then
-    error("buffer-list: format must be a string")
+    error("bufexplore: format must be a string")
   end
   if type(config.keymaps) ~= "table" then
-    error("buffer-list: keymaps must be a table")
+    error("bufexplore: keymaps must be a table")
   end
   if type(config.current_marker) ~= "string" or type(config.modified_marker) ~= "string" then
-    error("buffer-list: markers must be strings")
+    error("bufexplore: markers must be strings")
   end
 
   state.config = config

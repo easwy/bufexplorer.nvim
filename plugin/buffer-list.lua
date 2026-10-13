@@ -1,2 +1,0 @@
--- buffer-list.nvim intentionally does not auto-configure itself.
--- Call require("buffer-list").setup() from your Neovim configuration.
