@@ -1,0 +1,4 @@
+return {
+  format = "stylua",
+  stdin = true,
+}
