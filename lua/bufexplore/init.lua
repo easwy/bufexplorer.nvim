@@ -11,6 +11,12 @@ local defaults = {
     refresh = "r",
     close = "q",
   },
+  window = {
+    position = "left",
+    width = 30,
+    height = 15,
+    enter = true,
+  },
 }
 
 local state = {
@@ -20,6 +26,8 @@ local state = {
   line_to_bufnr = {},
   refresh_pending = false,
   previous_by_win = {},
+  winid = nil,
+  owned_windows = {},
   current_bufnr = nil,
   augroup = nil,
   setup_done = false,
@@ -140,6 +148,10 @@ local function format_line(bufnr)
   end))
 end
 
+local function is_valid_window(winid)
+  return type(winid) == "number" and vim.api.nvim_win_is_valid(winid)
+end
+
 local function current_list_window()
   local current_window = vim.api.nvim_get_current_win()
   if is_valid(state.list_bufnr)
@@ -163,7 +175,7 @@ local function render()
     table.insert(line_to_bufnr, bufnr)
   end
 
-  local window = current_list_window()
+  local window = current_list_window() or (is_valid_window(state.winid) and state.winid or nil)
   local cursor_row = 1
   if window then
     cursor_row = vim.api.nvim_win_get_cursor(window)[1]
@@ -198,6 +210,41 @@ local function configure_window(window)
   vim.wo[window].signcolumn = "no"
   vim.wo[window].wrap = false
   vim.wo[window].cursorline = true
+end
+
+local function acquire_window(position)
+  local bufnr = ensure_list_buffer()
+  position = position or state.config.window.position
+
+  if position == "current" then
+    state.winid = vim.api.nvim_get_current_win()
+    return state.winid
+  end
+
+  if is_valid_window(state.winid) then
+    if vim.api.nvim_win_get_buf(state.winid) ~= bufnr then
+      vim.api.nvim_win_set_buf(state.winid, bufnr)
+    end
+    return state.winid
+  end
+
+  local vertical = position == "left" or position == "right"
+  local split = position == "top" and "above"
+      or position == "bottom" and "below"
+      or position
+  local winid = vim.api.nvim_open_win(bufnr, state.config.window.enter, {
+    win = -1,
+    vertical = vertical,
+    width = vertical and state.config.window.width or nil,
+    height = not vertical and state.config.window.height or nil,
+    split = split,
+  })
+
+  state.winid = winid
+  state.owned_windows[winid] = true
+  vim.wo[winid].winfixwidth = true
+  vim.wo[winid].winfixheight = true
+  return winid
 end
 
 local function map_key(bufnr, key, callback)
@@ -287,6 +334,15 @@ function M.setup(opts)
   if type(config.current_marker) ~= "string" or type(config.modified_marker) ~= "string" then
     error("bufexplore: markers must be strings")
   end
+  if type(config.window) ~= "table" then
+    error("bufexplore: window must be a table")
+  end
+  if not vim.tbl_contains({ "current", "left", "right", "top", "bottom" }, config.window.position) then
+    error("bufexplore: window.position must be current, left, right, or top/bottom")
+  end
+  if type(config.window.width) ~= "number" or type(config.window.height) ~= "number" then
+    error("bufexplore: window dimensions must be numbers")
+  end
 
   state.config = config
   ensure_list_buffer()
@@ -310,15 +366,27 @@ function M.get_bufnr()
   return ensure_list_buffer()
 end
 
-function M.is_open()
-  return current_list_window() ~= nil
+function M.is_open(winid)
+  winid = winid or state.winid or vim.api.nvim_get_current_win()
+  return is_valid_window(winid)
+      and is_valid(state.list_bufnr)
+      and vim.api.nvim_win_get_buf(winid) == state.list_bufnr
 end
 
-function M.open()
-  local bufnr = ensure_list_buffer()
-  local window = vim.api.nvim_get_current_win()
+function M.open(opts)
+  opts = opts or {}
+  if type(opts) ~= "table" then
+    error("bufexplore.open() expects a table")
+  end
 
-  if vim.api.nvim_win_get_buf(window) ~= bufnr then
+  local bufnr = ensure_list_buffer()
+  local position = opts.position or state.config.window.position
+  local window = acquire_window(position)
+
+  if position == "current" and vim.api.nvim_win_get_buf(window) ~= bufnr then
+    state.previous_by_win[window] = vim.api.nvim_win_get_buf(window)
+    vim.api.nvim_win_set_buf(window, bufnr)
+  elseif position ~= "current" and vim.api.nvim_win_get_buf(window) ~= bufnr then
     state.previous_by_win[window] = vim.api.nvim_win_get_buf(window)
     vim.api.nvim_win_set_buf(window, bufnr)
   end
@@ -326,25 +394,26 @@ function M.open()
   configure_window(window)
   setup_keymaps(bufnr)
   render()
+  return window
 end
 
 function M.close()
-  local window = current_list_window()
+  local window = state.winid or current_list_window()
   if not window then
     return
   end
 
   local previous = state.previous_by_win[window]
   state.previous_by_win[window] = nil
-  if not is_valid(previous) or previous == state.list_bufnr then
-    previous = state.mru[1]
-  end
-
-  if not is_valid(previous) then
-    vim.cmd("enew")
-  else
-    state.current_bufnr = previous
+  local owned = state.owned_windows[window]
+  state.owned_windows[window] = nil
+  state.winid = nil
+  if owned and is_valid_window(window) then
+    vim.api.nvim_win_close(window, true)
+  elseif is_valid(previous) and previous ~= state.list_bufnr then
     vim.api.nvim_win_set_buf(window, previous)
+  elseif is_valid_window(window) then
+    vim.api.nvim_win_set_buf(window, state.mru[1] or vim.api.nvim_create_buf(true, false))
   end
 end
 
@@ -373,7 +442,7 @@ function M.select()
 
   touch(bufnr)
   state.current_bufnr = bufnr
-  vim.api.nvim_win_set_buf(0, bufnr)
+  vim.api.nvim_win_set_buf(state.winid or vim.api.nvim_get_current_win(), bufnr)
   schedule_refresh()
 end
 

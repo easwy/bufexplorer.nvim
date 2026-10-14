@@ -67,24 +67,32 @@ Set a keymap to `false` to disable it.
 
 ## Commands/API
 
-The plugin registers the `:BufExplore` user command:
+The plugin registers the `:BufExplore` user command. By default it opens a fixed-width left sidebar:
 
 ```vim
 :BufExplore
 ```
 
-It is equivalent to:
+Window behavior can be configured as follows:
 
 ```lua
-require("bufexplore").open()
+require("bufexplore").setup({
+  window = {
+    position = "left", -- left, right, top, bottom, or current
+    width = 30,
+    height = 15,
+    enter = true,
+  },
+})
 ```
 
-The Lua API is:
+The Neo-tree-style window implementation reuses the managed window, creates it only when needed, sets its width or height, and fixes both dimensions. Use `position = "current"` to restore the old behavior of replacing the current window.
+
 
 ```lua
 local buffers = require("bufexplore")
 
-buffers.open()    -- show in the current window; never creates a split
+buffers.open()    -- open in the configured window position
 buffers.close()
 buffers.toggle()
 buffers.refresh()
@@ -94,4 +102,4 @@ buffers.get_bufnr()
 buffers.is_open()
 ```
 
-`setup()` is not called automatically. The plugin does not depend on Edgy or call Edgy APIs. To embed it, configure Edgy to recognize the `bufexplore` filetype and call `require("bufexplore").open()` when the list should be displayed.
+`setup()` is not called automatically. The plugin does not depend on Edgy or call Edgy APIs. To embed it, configure Edgy to recognize the `bufexplore` filetype and use `position = "current"` when Edgy supplies the target window.
