@@ -19,7 +19,7 @@ local defaults = {
     exit_on_last_window = true,
     open_files_in_last_window = true,
     create_target_window = true,
-    ignored_filetypes = { "bufexplorer.nvim", "edgy", "neo-tree", "NvimTree", "Trouble", "qf" },
+    ignored_filetypes = { "bufexplorer", "edgy", "neo-tree", "NvimTree", "Trouble", "qf" },
     ignored_buftypes = { "terminal", "quickfix", "nofile", "prompt" },
   },
 }
@@ -144,7 +144,7 @@ local function ensure_list_buffer()
   vim.bo[bufnr].swapfile = false
   vim.bo[bufnr].modifiable = false
   vim.bo[bufnr].buflisted = false
-  vim.bo[bufnr].filetype = "bufexplorer.nvim"
+  vim.bo[bufnr].filetype = "bufexplorer"
 
   return bufnr
 end
