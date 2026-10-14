@@ -1,5 +1,7 @@
 local M = {}
 
+M.version = "0.1.0"
+
 local defaults = {
   format = "{bufnr} {basename} {path}",
   current_marker = ">",

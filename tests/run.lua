@@ -26,6 +26,8 @@ local outside = make_buffer("/tmp/bufexplorer-test-gamma.txt")
 vim.api.nvim_set_current_buf(first)
 
 local buffers = require("bufexplorer")
+assert_equal(buffers.version, "0.1.0", "plugin version")
+
 buffers.setup({
   window = {
     position = "left",

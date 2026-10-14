@@ -4,6 +4,8 @@ A small, dependency-free buffer list for Neovim 0.10+, designed to be embeddable
 
 `bufexplorer.nvim` is a fully agent-coded project. It is intended as a modern Neovim replacement for [jlanzarotta/bufexplorer](https://github.com/jlanzarotta/bufexplorer), while keeping the familiar `:BufExplore` command name distinct from that plugin's commands.
 
+`bufexplorer.nvim` is currently version `0.1.0`. It follows [Semantic Versioning](https://semver.org/). Before `1.0.0`, compatibility of APIs, configuration options, and behavior is not guaranteed between `0.x.x` releases. Starting with `1.0.0`, major releases may contain API or behavior-level changes; minor and patch releases remain backward compatible.
+
 ## Features
 
 - Lists valid, listed, named, ordinary file buffers.

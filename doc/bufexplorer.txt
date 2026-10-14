@@ -147,14 +147,14 @@ bufexplorer.is_open()
 EDGY INTEGRATION                                               *bufexplorer-edgy*
 
 bufexplorer.nvim does not depend on Edgy. Configure Edgy to manage the window
-and use the bufexplorer.nvim filetype. When Edgy supplies the target window, use
+and use the bufexplorer filetype. When Edgy supplies the target window, use
 position = "current": >
   require("bufexplorer").setup({
     window = { position = "current" },
   })
 <
 
-The list buffer has filetype "bufexplorer.nvim" and can therefore be recognized by
+The list buffer has filetype "bufexplorer" and can therefore be recognized by
 Edgy without the plugin calling Edgy APIs.
 
 ================================================================================
