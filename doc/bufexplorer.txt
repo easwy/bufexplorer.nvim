@@ -1,0 +1,162 @@
+*bufexplorer.txt*  Buffer list for Neovim
+
+================================================================================
+CONTENTS                                                      *bufexplorer-contents*
+
+Introduction ................................................. |bufexplorer-intro|
+Installation ................................................. |bufexplorer-install|
+Setup ....................................................... |bufexplorer-setup|
+Commands .................................................... |bufexplorer-commands|
+Configuration ............................................... |bufexplorer-config|
+API .......................................................... |bufexplorer-api|
+Edgy integration ............................................ |bufexplorer-edgy|
+
+================================================================================
+INTRODUCTION                                                  *bufexplorer-intro*
+
+bufexplorer.nvim is a dependency-free buffer list for Neovim 0.10+.
+It is fully agent-coded and is intended as a modern Neovim replacement for
+jlanzarotta/bufexplorer.
+
+The user command remains |:BufExplore| so it is distinct from other buffer
+explorer implementations.
+
+The plugin lists valid, listed, named file buffers in most-recently-used order.
+It can open its list in a sidebar, a top/bottom window, or the current window.
+
+================================================================================
+INSTALLATION                                                  *bufexplorer-install*
+
+The plugin has no runtime dependencies. Install it with a plugin manager or
+Neovim's native package support.
+
+lazy.nvim: >
+  return {
+    {
+      "easwy/bufexplorer.nvim",
+      config = function()
+        require("bufexplorer").setup()
+      end,
+    },
+  }
+<
+
+vim.pack (Neovim 0.12+): >
+  vim.pack.add({
+    "https://github.com/easwy/bufexplorer.nvim",
+  })
+<
+
+Manual installation: >
+  git clone https://github.com/easwy/bufexplorer.nvim \
+    ~/.local/share/nvim/site/pack/plugins/start/bufexplorer.nvim
+<
+
+Replace the repository owner/name above when installing a fork.
+
+================================================================================
+SETUP                                                        *bufexplorer-setup*
+
+Call setup from your Neovim configuration: >
+  require("bufexplorer").setup()
+<
+
+Calling |bufexplorer.open()| also initializes the plugin automatically, but
+explicit setup is recommended when customizing options.
+
+================================================================================
+COMMANDS                                                     *bufexplorer-commands*
+
+                                                        *:BufExplore*
+:BufExplore
+        Open the buffer list in the configured window position.
+
+The default buffer-local mappings are:
+
+<CR>    Open the selected buffer in the main editing window.
+d       Normally delete the selected buffer.
+r       Refresh the list.
+q       Close the list and restore the previous buffer.
+
+================================================================================
+CONFIGURATION                                                  *bufexplorer-config*
+
+The defaults are: >
+  require("bufexplorer").setup({
+    window = {
+      position = "left",
+      width = 30,
+      height = 15,
+      enter = true,
+      exit_on_last_window = true,
+      open_files_in_last_window = true,
+      create_target_window = true,
+    },
+  })
+<
+
+The window position can be "left", "right", "top", "bottom", or "current".
+When |bufexplorer-window-exit| is true and the explorer is the last window,
+closing it exits Neovim. Set it to false to keep Neovim open.
+
+The format supports these fields:
+
+                                                        *bufexplorer-format*
+{bufnr}     Buffer number.
+{basename}  File basename.
+{path}      Absolute file path.
+{current}   Current-buffer marker.
+{modified}  Modified-buffer marker.
+
+================================================================================
+API                                                            *bufexplorer-api*
+
+                                                        *bufexplorer.open()*
+bufexplorer.open({opts})
+        Open the list in the configured window position. Returns the window ID.
+
+                                                        *bufexplorer.close()*
+bufexplorer.close()
+        Close the list window or restore its previous buffer.
+
+                                                        *bufexplorer.toggle()*
+bufexplorer.toggle()
+        Toggle the list.
+
+                                                        *bufexplorer.refresh()*
+bufexplorer.refresh()
+        Refresh the list contents.
+
+                                                        *bufexplorer.select()*
+bufexplorer.select()
+        Open the selected file in the selected target editing window.
+
+                                                        *bufexplorer.delete()*
+bufexplorer.delete()
+        Delete the selected buffer, optionally asking for confirmation.
+
+                                                        *bufexplorer.get_bufnr()*
+bufexplorer.get_bufnr()
+        Return the list buffer number.
+
+                                                        *bufexplorer.is_open()*
+bufexplorer.is_open()
+        Return whether the list is displayed in the specified or managed window.
+
+================================================================================
+EDGY INTEGRATION                                               *bufexplorer-edgy*
+
+bufexplorer.nvim does not depend on Edgy. Configure Edgy to manage the window
+and use the bufexplorer.nvim filetype. When Edgy supplies the target window, use
+position = "current": >
+  require("bufexplorer").setup({
+    window = { position = "current" },
+  })
+<
+
+The list buffer has filetype "bufexplorer.nvim" and can therefore be recognized by
+Edgy without the plugin calling Edgy APIs.
+
+================================================================================
+                                                            *bufexplorer-license*
+License: see the LICENSE file in the repository.

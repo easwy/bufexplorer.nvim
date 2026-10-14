@@ -19,7 +19,7 @@ local defaults = {
     exit_on_last_window = true,
     open_files_in_last_window = true,
     create_target_window = true,
-    ignored_filetypes = { "bufexplore", "edgy", "neo-tree", "NvimTree", "Trouble", "qf" },
+    ignored_filetypes = { "bufexplorer.nvim", "edgy", "neo-tree", "NvimTree", "Trouble", "qf" },
     ignored_buftypes = { "terminal", "quickfix", "nofile", "prompt" },
   },
 }
@@ -41,7 +41,7 @@ local state = {
 }
 
 local function notify(message, level)
-  vim.notify("bufexplore: " .. message, level or vim.log.levels.INFO)
+  vim.notify("bufexplorer: " .. message, level or vim.log.levels.INFO)
 end
 
 local function is_valid(bufnr)
@@ -92,6 +92,27 @@ local function touch(bufnr)
   table.insert(state.mru, 1, bufnr)
 end
 
+local function sync_mru()
+  prune_mru()
+
+  local known = {}
+  for _, bufnr in ipairs(state.mru) do
+    known[bufnr] = true
+  end
+
+  local buffers = vim.api.nvim_list_bufs()
+  table.sort(buffers, function(left, right)
+    return left > right
+  end)
+
+  for _, bufnr in ipairs(buffers) do
+    if not known[bufnr] and is_displayable(bufnr) then
+      table.insert(state.mru, bufnr)
+    end
+  end
+end
+
+
 local function collect_initial_mru()
   local buffers = vim.api.nvim_list_bufs()
   table.sort(buffers)
@@ -117,13 +138,13 @@ local function ensure_list_buffer()
   local bufnr = vim.api.nvim_create_buf(false, true)
   state.list_bufnr = bufnr
 
-  vim.api.nvim_buf_set_name(bufnr, "[bufexplore]")
+  vim.api.nvim_buf_set_name(bufnr, "[bufexplorer]")
   vim.bo[bufnr].buftype = "nofile"
   vim.bo[bufnr].bufhidden = "hide"
   vim.bo[bufnr].swapfile = false
   vim.bo[bufnr].modifiable = false
   vim.bo[bufnr].buflisted = false
-  vim.bo[bufnr].filetype = "bufexplore"
+  vim.bo[bufnr].filetype = "bufexplorer.nvim"
 
   return bufnr
 end
@@ -169,7 +190,10 @@ local function render()
     return
   end
 
-  prune_mru()
+  if not state.setup_done then
+    collect_initial_mru()
+  end
+  sync_mru()
 
   local lines = {}
   local line_to_bufnr = {}
@@ -422,35 +446,35 @@ end
 function M.setup(opts)
   opts = opts or {}
   if type(opts) ~= "table" then
-    error("bufexplore.setup() expects a table")
+    error("bufexplorer.setup() expects a table")
   end
 
   local config = vim.tbl_deep_extend("force", vim.deepcopy(defaults), opts)
   if type(config.format) ~= "string" then
-    error("bufexplore: format must be a string")
+    error("bufexplorer: format must be a string")
   end
   if type(config.keymaps) ~= "table" then
-    error("bufexplore: keymaps must be a table")
+    error("bufexplorer: keymaps must be a table")
   end
   if type(config.current_marker) ~= "string" or type(config.modified_marker) ~= "string" then
-    error("bufexplore: markers must be strings")
+    error("bufexplorer: markers must be strings")
   end
   if type(config.window) ~= "table" then
-    error("bufexplore: window must be a table")
+    error("bufexplorer: window must be a table")
   end
   if not vim.tbl_contains({ "current", "left", "right", "top", "bottom" }, config.window.position) then
-    error("bufexplore: window.position must be current, left, right, or top/bottom")
+    error("bufexplorer: window.position must be current, left, right, or top/bottom")
   end
   if type(config.window.width) ~= "number" or type(config.window.height) ~= "number" then
-    error("bufexplore: window dimensions must be numbers")
+    error("bufexplorer: window dimensions must be numbers")
   end
   if type(config.window.enter) ~= "boolean" or type(config.window.exit_on_last_window) ~= "boolean"
       or type(config.window.open_files_in_last_window) ~= "boolean"
       or type(config.window.create_target_window) ~= "boolean" then
-    error("bufexplore: window boolean options must be booleans")
+    error("bufexplorer: window boolean options must be booleans")
   end
   if type(config.window.ignored_filetypes) ~= "table" or type(config.window.ignored_buftypes) ~= "table" then
-    error("bufexplore: ignored window lists must be tables")
+    error("bufexplorer: ignored window lists must be tables")
   end
 
   state.config = config
@@ -485,7 +509,7 @@ end
 function M.open(opts)
   opts = opts or {}
   if type(opts) ~= "table" then
-    error("bufexplore.open() expects a table")
+    error("bufexplorer.open() expects a table")
   end
 
   if not state.setup_done then
