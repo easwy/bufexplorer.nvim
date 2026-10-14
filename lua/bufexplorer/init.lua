@@ -150,26 +150,61 @@ local function ensure_list_buffer()
 end
 
 local function get_path(bufnr)
-  local name = vim.api.nvim_buf_get_name(bufnr)
-  return vim.fn.fnamemodify(name, ":p")
+  local file_path = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(bufnr), ":p")
+  local directory = vim.fn.fnamemodify(file_path, ":h")
+  local cwd = vim.fn.fnamemodify(vim.fn.getcwd(), ":p")
+
+  if cwd ~= "/" then
+    cwd = cwd:gsub("/+$", "")
+  end
+
+  if directory == cwd then
+    return "."
+  end
+
+  local prefix = cwd == "/" and "/" or cwd .. "/"
+  if vim.startswith(directory, prefix) then
+    return directory:sub(#prefix + 1)
+  end
+
+  return directory
 end
 
-local function format_line(bufnr)
-  local path = get_path(bufnr)
-  local basename = vim.fn.fnamemodify(path, ":t")
+local function line_values(bufnr)
+  local file_path = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(bufnr), ":p")
   local current = bufnr == state.current_bufnr
   local modified = vim.bo[bufnr].modified
-  local values = {
+
+  return {
     bufnr = tostring(bufnr),
-    basename = basename,
-    path = path,
+    basename = vim.fn.fnamemodify(file_path, ":t"),
+    path = get_path(bufnr),
     current = current and state.config.current_marker or "",
     modified = modified and state.config.modified_marker or "",
   }
+end
 
+local function format_line(bufnr, widths)
+  local values = line_values(bufnr)
   return (state.config.format:gsub("{([%w_]+)}", function(key)
-    return values[key] or ""
+    local value = values[key] or ""
+    local width = widths and widths[key]
+    if width and width > #value then
+      return value .. string.rep(" ", width - #value)
+    end
+    return value
   end))
+end
+
+local function get_format_widths()
+  local widths = {}
+  for _, bufnr in ipairs(state.mru) do
+    local values = line_values(bufnr)
+    for key in state.config.format:gmatch("{([%w_]+)}") do
+      widths[key] = math.max(widths[key] or 0, #(values[key] or ""))
+    end
+  end
+  return widths
 end
 
 local function is_valid_window(winid)
@@ -195,10 +230,11 @@ local function render()
   end
   sync_mru()
 
+  local widths = get_format_widths()
   local lines = {}
   local line_to_bufnr = {}
   for _, bufnr in ipairs(state.mru) do
-    table.insert(lines, format_line(bufnr))
+    table.insert(lines, format_line(bufnr, widths))
     table.insert(line_to_bufnr, bufnr)
   end
 
