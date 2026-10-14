@@ -379,6 +379,10 @@ function M.open(opts)
     error("bufexplore.open() expects a table")
   end
 
+  if not state.setup_done then
+    M.setup()
+  end
+
   local bufnr = ensure_list_buffer()
   local position = opts.position or state.config.window.position
   local window = acquire_window(position)
