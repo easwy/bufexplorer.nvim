@@ -17,6 +17,10 @@ local defaults = {
     height = 15,
     enter = true,
     exit_on_last_window = true,
+    open_files_in_last_window = true,
+    create_target_window = true,
+    ignored_filetypes = { "bufexplore", "edgy", "neo-tree", "NvimTree", "Trouble", "qf" },
+    ignored_buftypes = { "terminal", "quickfix", "nofile", "prompt" },
   },
 }
 
@@ -28,7 +32,9 @@ local state = {
   refresh_pending = false,
   previous_by_win = {},
   winid = nil,
+  target_winid = nil,
   owned_windows = {},
+  prior_windows = {},
   current_bufnr = nil,
   augroup = nil,
   setup_done = false,
@@ -209,6 +215,70 @@ local function configure_window(window)
   vim.wo[window].cursorline = true
 end
 
+local function is_suitable_target_window(winid)
+  if not is_valid_window(winid) or winid == state.winid then
+    return false
+  end
+
+  local bufnr = vim.api.nvim_win_get_buf(winid)
+  local buffer = vim.bo[bufnr]
+  local filetypes = state.config.window.ignored_filetypes
+  local buftypes = state.config.window.ignored_buftypes
+
+  if vim.tbl_contains(filetypes, buffer.filetype)
+      or vim.tbl_contains(buftypes, buffer.buftype)
+      or vim.wo[winid].winfixbuf then
+    return false
+  end
+
+  return true
+end
+
+local function get_prior_window()
+  local tabpage = vim.api.nvim_get_current_tabpage()
+  local history = state.prior_windows[tabpage] or {}
+
+  for index = #history, 1, -1 do
+    if is_suitable_target_window(history[index]) then
+      return history[index]
+    end
+  end
+
+  return nil
+end
+
+local function create_target_window()
+  local current_window = vim.api.nvim_get_current_win()
+  vim.api.nvim_set_current_win(current_window)
+  vim.cmd("belowright split")
+  return vim.api.nvim_get_current_win()
+end
+
+local function target_window()
+  if state.config.window.open_files_in_last_window then
+    if is_suitable_target_window(state.target_winid) then
+      return state.target_winid
+    end
+
+    local prior = get_prior_window()
+    if prior then
+      return prior
+    end
+  end
+
+  for _, winid in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    if is_suitable_target_window(winid) then
+      return winid
+    end
+  end
+
+  if state.config.window.create_target_window then
+    return create_target_window()
+  end
+
+  return nil
+end
+
 local function acquire_window(position)
   local bufnr = ensure_list_buffer()
   position = position or state.config.window.position
@@ -294,6 +364,40 @@ local function create_autocmds()
   end
   state.augroup = vim.api.nvim_create_augroup("BufferList", { clear = true })
 
+  vim.api.nvim_create_autocmd("WinEnter", {
+    group = state.augroup,
+    callback = function()
+      local tabpage = vim.api.nvim_get_current_tabpage()
+      local winid = vim.api.nvim_get_current_win()
+      local history = state.prior_windows[tabpage] or {}
+      state.prior_windows[tabpage] = history
+
+      for index = #history, 1, -1 do
+        if history[index] == winid then
+          table.remove(history, index)
+        end
+      end
+      table.insert(history, winid)
+    end,
+  })
+
+  vim.api.nvim_create_autocmd("WinClosed", {
+    group = state.augroup,
+    callback = function(args)
+      local closed = tonumber(args.match)
+      for _, history in pairs(state.prior_windows) do
+        for index = #history, 1, -1 do
+          if history[index] == closed then
+            table.remove(history, index)
+          end
+        end
+      end
+      if state.target_winid == closed then
+        state.target_winid = nil
+      end
+    end,
+  })
+
   vim.api.nvim_create_autocmd({ "BufEnter" }, {
     group = state.augroup,
     callback = function(args)
@@ -340,8 +444,13 @@ function M.setup(opts)
   if type(config.window.width) ~= "number" or type(config.window.height) ~= "number" then
     error("bufexplore: window dimensions must be numbers")
   end
-  if type(config.window.enter) ~= "boolean" or type(config.window.exit_on_last_window) ~= "boolean" then
-    error("bufexplore: window.enter and window.exit_on_last_window must be booleans")
+  if type(config.window.enter) ~= "boolean" or type(config.window.exit_on_last_window) ~= "boolean"
+      or type(config.window.open_files_in_last_window) ~= "boolean"
+      or type(config.window.create_target_window) ~= "boolean" then
+    error("bufexplore: window boolean options must be booleans")
+  end
+  if type(config.window.ignored_filetypes) ~= "table" or type(config.window.ignored_buftypes) ~= "table" then
+    error("bufexplore: ignored window lists must be tables")
   end
 
   state.config = config
@@ -385,6 +494,10 @@ function M.open(opts)
 
   local bufnr = ensure_list_buffer()
   local position = opts.position or state.config.window.position
+  local current_window = vim.api.nvim_get_current_win()
+  if position == "current" or vim.api.nvim_win_get_buf(current_window) ~= bufnr then
+    state.target_winid = current_window
+  end
   local window = acquire_window(position)
 
   if position == "current" and vim.api.nvim_win_get_buf(window) ~= bufnr then
@@ -449,8 +562,19 @@ function M.select()
   end
 
   touch(bufnr)
+  local target = target_window()
+  if not target then
+    notify("no suitable window available for opening the buffer", vim.log.levels.WARN)
+    return
+  end
+
   state.current_bufnr = bufnr
-  vim.api.nvim_win_set_buf(state.winid or vim.api.nvim_get_current_win(), bufnr)
+  local ok = pcall(vim.api.nvim_set_current_win, target)
+  if not ok then
+    notify("the target window is no longer available", vim.log.levels.WARN)
+    return
+  end
+  vim.api.nvim_win_set_buf(target, bufnr)
   schedule_refresh()
 end
 
