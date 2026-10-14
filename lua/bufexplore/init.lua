@@ -46,10 +46,6 @@ local function is_displayable(bufnr)
     return false
   end
 
-  if not vim.api.nvim_buf_is_loaded(bufnr) then
-    return false
-  end
-
   local buffer = vim.bo[bufnr]
   if not buffer.buflisted or buffer.buftype ~= "" then
     return false
