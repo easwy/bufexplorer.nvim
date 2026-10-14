@@ -16,6 +16,7 @@ local defaults = {
     width = 30,
     height = 15,
     enter = true,
+    exit_on_last_window = true,
   },
 }
 
@@ -339,6 +340,9 @@ function M.setup(opts)
   if type(config.window.width) ~= "number" or type(config.window.height) ~= "number" then
     error("bufexplore: window dimensions must be numbers")
   end
+  if type(config.window.enter) ~= "boolean" or type(config.window.exit_on_last_window) ~= "boolean" then
+    error("bufexplore: window.enter and window.exit_on_last_window must be booleans")
+  end
 
   state.config = config
   ensure_list_buffer()
@@ -408,6 +412,10 @@ function M.close()
   local owned = state.owned_windows[window]
   state.owned_windows[window] = nil
   state.winid = nil
+  if #vim.api.nvim_list_wins() == 1 and state.config.window.exit_on_last_window then
+    vim.cmd("quit")
+    return
+  end
   if owned and is_valid_window(window) then
     vim.api.nvim_win_close(window, true)
   elseif is_valid(previous) and previous ~= state.list_bufnr then

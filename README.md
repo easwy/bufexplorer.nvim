@@ -82,12 +82,30 @@ require("bufexplore").setup({
     width = 30,
     height = 15,
     enter = true,
+    exit_on_last_window = true,
   },
 })
 ```
 
-The Neo-tree-style window implementation reuses the managed window, creates it only when needed, sets its width or height, and fixes both dimensions. Use `position = "current"` to restore the old behavior of replacing the current window.
+The `exit_on_last_window` option controls what happens when the BufExplorer window is the last Neovim window. It is enabled by default:
 
+```lua
+require("bufexplore").setup({
+  window = {
+    exit_on_last_window = true,
+  },
+})
+```
+
+Set it to `false` to keep Neovim open and replace the BufExplorer window with a regular buffer when closing:
+
+```lua
+require("bufexplore").setup({
+  window = {
+    exit_on_last_window = false,
+  },
+})
+```
 
 ```lua
 local buffers = require("bufexplore")
